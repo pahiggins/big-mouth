@@ -3,6 +3,7 @@
 const fs = require('fs').promises
 const Mustache = require('mustache')
 const http = require('superagent-promise')(require('superagent'), Promise)
+const aws4 = require('aws4')
 
 let html
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -21,7 +22,20 @@ const loadHtml = async () => {
 }
 
 const getRestaurants = async () => {
-  const restaurants = await http.get(restaurantsApiRoot)
+  let url = new URL(restaurantsApiRoot)
+  let opts = {
+    host: url.hostname,
+    path: url.pathname
+  }
+
+  aws4.sign(opts)
+
+  const restaurants = await http
+    .get(restaurantsApiRoot)
+    .set('Host', opts.headers['Host'])
+    .set('X-Amz-Date', opts.headers['X-Amz-Date'])
+    .set('Authorization', opts.headers['Authorization'])
+    .set('X-Amz-Security-Token', opts.headers['X-Amz-Security-Token'])
 
   return restaurants.body
 }
